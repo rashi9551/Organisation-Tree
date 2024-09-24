@@ -3,7 +3,6 @@ import Controller from "../controllers/controller";
 
 const router=Router()
 
-router.post('/createTree',Controller.createTree);
 
 
 router.post('/createNode',Controller.createNode);

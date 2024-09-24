@@ -1,22 +1,15 @@
 import {Response,Request} from 'express'
-import { StatusCode } from '../interfaces/enum'
-
+import { StatusCode } from '../../interfaces/enum'
+import useCase from '../useCase/useCase'
+import { NodeData } from '../../interfaces/interface'
 
 export default new class Controller{
 
-    createTree=async(req:Request,res:Response)=>{
-        try {
-            const registerResponse={status:200}
-           res.status(registerResponse?.status).json(registerResponse)
-        } catch (error) {
-            console.log(error);
-            return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
-        }
-    }
     createNode=async(req:Request,res:Response)=>{
         try {
-            const registerResponse={status:200}
-           res.status(registerResponse?.status).json(registerResponse)
+            const nodeData=req.body
+            const registerResponse=await useCase.createNode(nodeData)
+           res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
@@ -24,8 +17,8 @@ export default new class Controller{
     }
     updateNode=async(req:Request,res:Response)=>{
         try {
-            const registerResponse={status:200}
-           res.status(registerResponse?.status).json(registerResponse)
+            const registerResponse=useCase.updateNode()
+           res.status(registerResponse).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
@@ -33,8 +26,8 @@ export default new class Controller{
     }
     removeNode=async(req:Request,res:Response)=>{
         try {
-            const registerResponse={status:200}
-           res.status(registerResponse?.status).json(registerResponse)
+            const registerResponse=useCase.removeNode()
+           res.status(registerResponse).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
@@ -42,8 +35,8 @@ export default new class Controller{
     }
     getTree=async(req:Request,res:Response)=>{
         try {
-            const registerResponse={status:200}
-           res.status(registerResponse?.status).json(registerResponse)
+            const registerResponse=useCase.getTree()
+           res.status(registerResponse).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
