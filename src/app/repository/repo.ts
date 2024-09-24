@@ -59,57 +59,89 @@ export default new class OrgTreeRepository {
     
 
     // Update an existing node
-    async updateNode( updateData: Partial<Node>): Promise<Node | null> {
-        const node = await this.nodeRepo.findOne({ where: { id: updateData.id } });
-        if (!node) return null;
-        Object.assign(node, updateData);
-
-        // Save the updated node back to the repository
-        const savedNode = await this.nodeRepo.save(node);
-        console.log("?????",updateData,"ithu updated data"); // Log the saved node and updated node
-        return savedNode;
-        
+    async updateNode(updateData: Partial<Node>): Promise<Node | null> {
+        try {
+            // Fetch the node by ID
+            const node = await this.nodeRepo.findOne({ where: { id: updateData.id } });
+            if (!node) {
+                console.error(`Node with ID ${updateData.id} not found`);
+                return null; // Return null if the node doesn't exist
+            }
+    
+            // Update the node with new data
+            Object.assign(node, updateData);
+    
+            // Save the updated node back to the repository
+            const savedNode = await this.nodeRepo.save(node);
+            console.log('Node updated successfully:', savedNode);
+            
+            return savedNode; // Return the updated node
+    
+        } catch (error) {
+            console.error('Error during node update:', error);
+            throw new Error('Error updating node'); // Optionally re-throw the error for further handling
+        }
     }
+    
 
     // Remove a node with the option to either delete all children or shift them up
     async removeNode(nodeId: number, shiftChildren: boolean = false): Promise<void> {
-        const node = await this.nodeRepo.findOne({ where: { id: nodeId }, relations: ['children'] });
-        if (!node) return;
+        try {
+            // Fetch the node along with its children
+            const node = await this.nodeRepo.findOne({ where: { id: nodeId }, relations: ['children'] });
+            if (!node) return; // If node doesn't exist, exit
+    
+            if (shiftChildren && node.children.length > 0) {
+                // Shift child nodes one level up
+                let parentColor = (await this.findNodeById(node.parentId)).color;
 
-        if (shiftChildren) {
-            // Shift child nodes one level up
-            for (const child of node.children) {
-                child.parentId = node.parentId; 
-                await this.nodeRepo.save(child);
+                for (const child of node.children) {
+                    child.parentId = node.parentId; 
+                    if (child.type === "location" || child.type === "department") {
+                        parentColor = child.color; 
+                    } else {
+                        child.color = parentColor;
+                    }
+                    
+                    await this.nodeRepo.save(child); // Save the updated child nodes
+                }
+            } else {
+                for (const child of node.children) {
+                    await this.removeNode(child.id, false);
+                }
             }
-        } else {
-            // Remove all child nodes along with the current node
-            for (const child of node.children) {
-                await this.removeNode(child.id, false); // Recursive removal of child nodes
-            }
+    
+            // Finally, remove the node itself
+            await this.nodeRepo.remove(node);
+        } catch (error) {
+            console.error("Error during node removal in repository:", error);
+            throw error; // Re-throw error to be handled at a higher level
         }
-
-        await this.nodeRepo.remove(node); 
     }
+    
+    
 
     // Get the entire organization tree (or a subtree from a particular node)
     async getTree(rootNodeId?: number): Promise<Node[]> {
-        if (rootNodeId) {
-            // Get a specific subtree starting from the rootNodeId
-            return await this.nodeRepo.find({
-                where: { id: rootNodeId },
+        try {
+            if (rootNodeId) {
+                const subtree = await this.nodeRepo.find({
+                    where: { id: rootNodeId },
+                    relations: ['children'],
+                });
+                return subtree;
+            }
+    
+            const fullTree = await this.nodeRepo.find({
+                where: { parent: null },
                 relations: ['children'],
             });
+            return fullTree;
+        } catch (error) {
+            console.error("Error fetching the tree:", error);
+            throw error;
         }
-
-        // Get the entire organization tree (assuming the root node has no parent)
-        return await this.nodeRepo.find({
-            where: { parent: null },
-            relations: ['children'],
-        });
     }
-
-
 
    
 };

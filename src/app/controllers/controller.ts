@@ -26,8 +26,8 @@ export default new class Controller{
     }
     removeNode=async(req:Request,res:Response)=>{
         try {
-            const registerResponse=useCase.removeNode()
-           res.status(registerResponse).json(registerResponse)
+            const registerResponse=await useCase.removeNode(req.body)
+           res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 

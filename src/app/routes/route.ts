@@ -11,7 +11,7 @@ router.post('/createNode',Controller.createNode);
 router.put('/updateNode',Controller.updateNode); 
 
 
-router.delete('/removeNode/:id',Controller.removeNode); 
+router.delete('/removeNode',Controller.removeNode); 
 
 
 router.get('/getTree',Controller.getTree);

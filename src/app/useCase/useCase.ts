@@ -1,6 +1,6 @@
 import { Node, NodeType } from "../../entity/org-tree";
 import { StatusCode } from "../../interfaces/enum";
-import { NodeData, NodePromise, TreePromise } from "../../interfaces/interface";
+import { deleteData, NodeData, NodePromise, TreePromise } from "../../interfaces/interface";
 import { buildTree } from "../../middleware/buildTree";
 import Repo from "../repository/repo";
 
@@ -15,7 +15,7 @@ let lastAssignedColorIndex: number = 0; // Tracks the last color index globally
 export default new class UseCase {
     
     createNode = async (nodeData: NodeData): Promise<NodePromise> => {
-        try { 
+        try {
             if (!nodeData.type) {
                 return { status: 400, message: "Node type is required." }; // Bad request
             }
@@ -49,8 +49,17 @@ export default new class UseCase {
                 }
             } else {
                 // For other nodes, inherit color from the parent node
-                const parentNode = await Repo.findNodeById(nodeData.parentId);
-                nodeData.color = parentNode.color; // Inherit parent's color
+                try {
+                    const parentNode = await Repo.findNodeById(nodeData.parentId);
+                    if (parentNode) {
+                        nodeData.color = parentNode.color; // Inherit parent's color
+                    } else {
+                        throw new Error(`Parent node with ID ${nodeData.parentId} not found`);
+                    }
+                } catch (error) {
+                    console.error("Error fetching parent node:", error);
+                    throw error;
+                }
             }
 
             // Create the node under the specified parent
@@ -129,6 +138,12 @@ export default new class UseCase {
             if(nodeData.parentId)node.parentId=nodeData.parentId
             
             // Save updated node in the database
+            let parentColor = (await Repo.findNodeById(nodeData.parentId)).color;
+            if (node.type === "location" || node.type === "department") {
+                parentColor = node.color; 
+            } else {
+                node.color = parentColor;
+            }
             const updatedNode = await Repo.updateNode(node);
             return { status: StatusCode.OK as number, node: updatedNode, message: "Node updated successfully." };
     
@@ -140,35 +155,76 @@ export default new class UseCase {
     
 
     private moveChildrenToNewParent = async (nodeId: number, newParentId: number) => {
-        console.log(nodeId,newParentId,"ithu change aaakendey");
-        const children = await Repo.findChildrenOfNode(nodeId);
-        for (const child of children) {            
-            await Repo.updateNode({ ...child, parentId: newParentId });
-        }
-    };
-
-    // Example function to shift children one level up (you'll need to implement this)
-    private shiftChildrenOneLevelUp = async (nodeId: number, levelUpParentId: number) => {
-        // Find direct children of the current node
-        const children = await Repo.findChildrenOfNode(nodeId);
-        
-        // Update each child's parent to the "levelUpParentId" (the node's parent)
-        for (const child of children) {
-            console.log(`Shifting child ${child.id} to parent ${levelUpParentId}`);
-            await Repo.updateNode({ ...child, parentId: levelUpParentId })
-        }
-    };
-    
-    
-    removeNode = async (): Promise<null > => {
         try {
-           
-            return null
+            let parentColor = (await Repo.findNodeById(newParentId)).color;
+            console.log(nodeId, newParentId, "Propagating color change");
+    
+            const children = await Repo.findChildrenOfNode(nodeId);
+    
+            for (const child of children) {
+                if (child.type === "location" || child.type === "department") {
+                    parentColor = child.color; 
+                } else {
+                    child.color = parentColor;
+                }
+                // Update child node with new parent ID and potentially new color
+                await Repo.updateNode({ ...child });            
+            }
         } catch (error) {
-            console.error("Error during registration:", error);
-            return null
+            console.error("Error in moveChildrenToNewParent:", error);
+            throw error; // Rethrow error to handle at a higher level if necessary
         }
-    }
+    };
+    
+    private shiftChildrenOneLevelUp = async (nodeId: number, levelUpParentId: number) => {
+        try {
+            let parentColor = (await Repo.findNodeById(levelUpParentId)).color;
+            const children = await Repo.findChildrenOfNode(nodeId);
+            
+            for (const child of children) {
+                if (child.type === "location" || child.type === "department") {
+                    parentColor = child.color; 
+                } else {
+                    child.color = parentColor;
+                }
+                
+                console.log(`Shifting child ${child.id} to parent ${levelUpParentId}`);
+                await Repo.updateNode({ ...child, parentId: levelUpParentId });
+            }
+        } catch (error) {
+            console.error("Error in shiftChildrenOneLevelUp:", error);
+            throw error; // Rethrow error to handle at a higher level if necessary
+        }
+    };
+    
+    
+    removeNode = async (deleteData: deleteData): Promise<NodePromise> => {
+        try {
+            const node = await Repo.findNodeById(deleteData.id);
+            if (!node) {
+                return { status: StatusCode.NotFound as number, message: `Node with ID ${deleteData.id} does not exist.` };
+            }
+    
+            // Prevent deleting the root node (organization)
+            if (node.type === 'organization') {
+                return { status: StatusCode.BadRequest as number, message: "Deleting the root node will deprecate the entire organization tree." };
+            }
+    
+            // Remove node based on the condition of shifting children or not
+            await Repo.removeNode(deleteData.id, deleteData.shiftChildren);
+            const message = deleteData.shiftChildren 
+                ? "Node removed and children shifted one level up." 
+                : "Node and all child nodes removed successfully.";
+                
+            return { status: StatusCode.OK as number, message };
+    
+        } catch (error) {
+            console.error("Error during node removal:", error);
+            return { status: StatusCode.InternalServerError as number, message: "Error removing node." };
+        }
+    };
+    
+    
     getTree = async (): Promise<TreePromise > => {
         try {
            const getFullTree:Node[]=await Repo.getTree()

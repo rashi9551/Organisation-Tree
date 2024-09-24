@@ -23,3 +23,7 @@ export interface TreePromise{
     message?:string
 
 }
+export interface deleteData{
+    id:number;
+    shiftChildren:boolean;
+}
