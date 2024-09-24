@@ -17,8 +17,8 @@ export default new class Controller{
     }
     updateNode=async(req:Request,res:Response)=>{
         try {
-            const registerResponse=useCase.updateNode()
-           res.status(registerResponse).json(registerResponse)
+            const registerResponse=await useCase.updateNode(req.body)
+           res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 
@@ -35,8 +35,8 @@ export default new class Controller{
     }
     getTree=async(req:Request,res:Response)=>{
         try {
-            const registerResponse=useCase.getTree()
-           res.status(registerResponse).json(registerResponse)
+            const registerResponse=await useCase.getTree()
+           res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
             console.log(error);
             return res.status(StatusCode.InternalServerError).json({ message: 'Internal Server Error' }); 

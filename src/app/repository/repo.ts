@@ -22,6 +22,7 @@ export default new class OrgTreeRepository {
         }
     }
 
+
     async nodeExists(nodeId: number): Promise<boolean> {
         try {
             const node = await this.nodeRepo.findOne({ where: { id: nodeId } });
@@ -33,18 +34,14 @@ export default new class OrgTreeRepository {
         }
     }
 
-    async findNodeById(nodeId: number): Promise<Node> {
+    async findNodeById(nodeId: number): Promise<Node | null> {
         try {
-            const node = await this.nodeRepo.findOne({ where: { id: nodeId }, relations: ['children'] });
-            return node
+            const node = await this.nodeRepo.findOne({ where: { id: nodeId } });
+            return node;
         } catch (error) {
             console.error("Error getNode:", error);
             throw error;
         }
-    }
-
-    async updateNodeColor(nodeId: number, color: string): Promise<void> {
-        await this.nodeRepo.update(nodeId, { color });
     }
 
     async findChildrenOfNode(parentId: number): Promise<Node[]> {
@@ -59,14 +56,19 @@ export default new class OrgTreeRepository {
         }
     }
     
+    
 
     // Update an existing node
-    async updateNode(nodeId: number, updateData: Partial<Node>): Promise<Node | null> {
-        const node = await this.nodeRepo.findOne({ where: { id: nodeId } });
+    async updateNode( updateData: Partial<Node>): Promise<Node | null> {
+        const node = await this.nodeRepo.findOne({ where: { id: updateData.id } });
         if (!node) return null;
-
         Object.assign(node, updateData);
-        return await this.nodeRepo.save(node);
+
+        // Save the updated node back to the repository
+        const savedNode = await this.nodeRepo.save(node);
+        console.log("?????",updateData,"ithu updated data"); // Log the saved node and updated node
+        return savedNode;
+        
     }
 
     // Remove a node with the option to either delete all children or shift them up

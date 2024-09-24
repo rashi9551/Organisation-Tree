@@ -8,7 +8,7 @@ const router=Router()
 router.post('/createNode',Controller.createNode);
 
 
-router.put('/updateNode/:id',Controller.updateNode); 
+router.put('/updateNode',Controller.updateNode); 
 
 
 router.delete('/removeNode/:id',Controller.removeNode); 
