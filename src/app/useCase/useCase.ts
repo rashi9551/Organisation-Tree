@@ -109,9 +109,9 @@ export default new class UseCase {
             
             // Option to move child nodes with the current node or shift them up
             if (nodeData.parentId && nodeData.parentId !== node.parentId) {
-                if (nodeData.isWantToMove) {
+                if (nodeData.shiftChildren) {
                     if(node.type==="employee")await this.moveChildrenToNewParent(node.id, nodeData.parentId);
-                } else if(!nodeData.isWantToMove) {
+                } else if(!nodeData.shiftChildren) {
                     await this.shiftChildrenOneLevelUp(node.id,node.parentId);
                 }
             }

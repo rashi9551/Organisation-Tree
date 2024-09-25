@@ -36,9 +36,7 @@ export default new class OrgTreeRepository {
 
     async findNodeById(nodeId: number): Promise<Node | null> {
         try {
-            const node = await this.nodeRepo.findOne({ where: { id: nodeId } });
-            console.log(node,"thi is node by id");
-            
+            const node = await this.nodeRepo.findOne({ where: { id: nodeId } });            
             return node;
         } catch (error) {
             console.error("Error getNode:", error);
@@ -52,7 +50,6 @@ export default new class OrgTreeRepository {
             const childernOfNodes= await this.nodeRepo.find({
                 where: { parentId },
             });
-            console.log(childernOfNodes,"=---=- this is children");
             
             return childernOfNodes
         

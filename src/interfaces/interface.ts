@@ -5,7 +5,7 @@ export interface NodeData {
     name: string;
     type: NodeType;
     color: string;
-    isWantToMove?:boolean;
+    shiftChildren?:boolean;
     parentId: number;
     children?: NodeData[];
 }
