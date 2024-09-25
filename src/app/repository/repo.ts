@@ -75,9 +75,7 @@ export default new class OrgTreeRepository {
             Object.assign(node, updateData);
     
             // Save the updated node back to the repository
-            const savedNode = await this.nodeRepo.save(node);
-            console.log('Node updated successfully:', savedNode);
-            
+            const savedNode = await this.nodeRepo.save(node);            
             return savedNode; // Return the updated node
     
         } catch (error) {

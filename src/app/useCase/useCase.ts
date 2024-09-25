@@ -10,7 +10,7 @@ const colorPool = [
     "#F68EAB", "#F6CE8E", "#DFF68E"
 ];
 
-let lastAssignedColorIndex: number = 0; // Tracks the last color index globally
+let lastAssignedColorIndex: number = 0; 
 
 export default new class UseCase {
     
@@ -24,7 +24,7 @@ export default new class UseCase {
             if (!Object.values(NodeType).includes(nodeData.type)) {
                 return { status: 400, message: `Invalid node type. Allowed types are: ${Object.values(NodeType).join(', ')}.` };
             }
-            
+
             const existingRootNode = await Repo.findRootNode(); // A method to find the root node
 
             if(!existingRootNode && nodeData.type!=NodeType.ORGANIZATION){
