@@ -3,6 +3,8 @@ import express from 'express';
 import * as dotenv from 'dotenv';
 import route from './app/routes/route';
 import logger from 'morgan'
+import cors from 'cors'
+
 
 dotenv.config();
 
@@ -10,6 +12,7 @@ const app = express();
 
 app.use(express.json());
 app.use(logger("dev"))
+app.use(cors());
 
 app.use('/api', route);
 

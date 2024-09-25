@@ -16,6 +16,7 @@ export default new class UseCase {
     
     createNode = async (nodeData: NodeData): Promise<NodePromise> => {
         try {
+
             if (!nodeData.type) {
                 return { status: 400, message: "Node type is required." }; // Bad request
             }
@@ -23,12 +24,21 @@ export default new class UseCase {
             if (!Object.values(NodeType).includes(nodeData.type)) {
                 return { status: 400, message: `Invalid node type. Allowed types are: ${Object.values(NodeType).join(', ')}.` };
             }
+            
+            const existingRootNode = await Repo.findRootNode(); // A method to find the root node
+
+            if(!existingRootNode && nodeData.type!=NodeType.ORGANIZATION){
+                return {
+                    status: StatusCode.BadRequest as number,
+                    message: "Cannot create child nodes without a root node (organization). Please create a root node first.",
+                };
+            }
+
 
             // Case for root node creation (no parent)
             if (!nodeData.parentId) {
 
                 // Check if a root node already exists
-                const existingRootNode = await Repo.findRootNode(); // A method to find the root node
                 if (existingRootNode) {
                     return {
                         status: StatusCode.BadRequest as number,
