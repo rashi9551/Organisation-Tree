@@ -7,6 +7,8 @@ export default new class Controller{
 
     createNode=async(req:Request,res:Response)=>{
         try {
+            console.log("node creating");
+            
             const nodeData=req.body
             const registerResponse=await useCase.createNode(nodeData)
            res.status(registerResponse.status).json(registerResponse)
@@ -17,6 +19,8 @@ export default new class Controller{
     }
     updateNode=async(req:Request,res:Response)=>{
         try {
+            console.log("updateing");
+            
             const registerResponse=await useCase.updateNode(req.body)
            res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
@@ -35,6 +39,7 @@ export default new class Controller{
     }
     getTree=async(req:Request,res:Response)=>{
         try {
+            console.log("geeting tree");
             const registerResponse=await useCase.getTree()
            res.status(registerResponse.status).json(registerResponse)
         } catch (error) {
