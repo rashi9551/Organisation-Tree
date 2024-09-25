@@ -26,7 +26,17 @@ export default new class UseCase {
 
             // Case for root node creation (no parent)
             if (!nodeData.parentId) {
-                nodeData.color = "white"; // Default color for root node
+
+                // Check if a root node already exists
+                const existingRootNode = await Repo.findRootNode(); // A method to find the root node
+                if (existingRootNode) {
+                    return {
+                        status: StatusCode.BadRequest as number,
+                        message: "A root node already exists. Only one root node is allowed.",
+                    };
+                }
+
+                nodeData.color = "white"; 
                 const node = await Repo.createNode(nodeData);
                 return { status: StatusCode.Created as number, node, message: "Root node created successfully" };
             }
@@ -39,9 +49,9 @@ export default new class UseCase {
 
             // Assign color for location or department nodes
             if (nodeData.type === "location" || nodeData.type === "department") {
-                nodeData.color = colorPool[lastAssignedColorIndex]; // Assign the next color from the pool
+                nodeData.color = colorPool[lastAssignedColorIndex]; 
                 console.log(lastAssignedColorIndex,colorPool[lastAssignedColorIndex]);
-                lastAssignedColorIndex++; // Increment the color index
+                lastAssignedColorIndex++;
 
                 // Reset the color index if it exceeds the pool length
                 if (lastAssignedColorIndex >= colorPool.length) {
@@ -72,37 +82,7 @@ export default new class UseCase {
         }
     }
 
-    async checkForCycle(nodeId: number, newParentId: number): Promise<boolean> {
-        const descendants: number[] = [];
     
-        // Recursive function to get all descendants of a node
-        async function getChildren(parentId: number): Promise<void> {
-            try {
-                const children = await Repo.findChildrenOfNode(parentId); // Fetch direct children of the current node
-                for (const child of children) {
-                    descendants.push(child.id); // Add child ID to descendants list
-                    await getChildren(child.id); // Recursively get children of this child
-                }
-            } catch (error) {
-                console.error(`Error fetching children of node ${parentId}:`, error);
-                throw new Error(`Error fetching descendants for node ${parentId}`);
-            }
-        }
-    
-        try {
-            await getChildren(nodeId); // Start finding descendants from the given nodeId
-
-            // After collecting descendants, check if newParentId is in descendants
-            if (descendants.includes(newParentId)) {
-                return true; // A cycle would be created
-            } else {
-                return false; // No cycle detected
-            }
-        } catch (error) {
-            console.error(`Error fetching descendants for node ${nodeId}:`, error);
-            throw new Error(`Failed to retrieve all descendants for node ${nodeId}`);
-        }
-    }
     
     
     
@@ -130,7 +110,7 @@ export default new class UseCase {
             // Option to move child nodes with the current node or shift them up
             if (nodeData.parentId && nodeData.parentId !== node.parentId) {
                 if (nodeData.isWantToMove) {
-                    await this.moveChildrenToNewParent(node.id, nodeData.parentId);
+                    if(node.type==="employee")await this.moveChildrenToNewParent(node.id, nodeData.parentId);
                 } else if(!nodeData.isWantToMove) {
                     await this.shiftChildrenOneLevelUp(node.id,node.parentId);
                 }
@@ -139,8 +119,10 @@ export default new class UseCase {
             
             // Save updated node in the database
             let parentColor = (await Repo.findNodeById(nodeData.parentId)).color;
-            if (node.type === "location" || node.type === "department") {
+
+            if (node.type == "location" || node.type == "department") {
                 parentColor = node.color; 
+                console.log(parentColor,"ithu parent =--=-=-=-=-");
             } else {
                 node.color = parentColor;
             }
@@ -152,52 +134,9 @@ export default new class UseCase {
             return { status: StatusCode.InternalServerError as number, message: "Error updating node." };
         }
     }
-    
 
-    private moveChildrenToNewParent = async (nodeId: number, newParentId: number) => {
-        try {
-            let parentColor = (await Repo.findNodeById(newParentId)).color;
-            console.log(nodeId, newParentId, "Propagating color change");
-    
-            const children = await Repo.findChildrenOfNode(nodeId);
-    
-            for (const child of children) {
-                if (child.type === "location" || child.type === "department") {
-                    parentColor = child.color; 
-                } else {
-                    child.color = parentColor;
-                }
-                // Update child node with new parent ID and potentially new color
-                await Repo.updateNode({ ...child });            
-            }
-        } catch (error) {
-            console.error("Error in moveChildrenToNewParent:", error);
-            throw error; // Rethrow error to handle at a higher level if necessary
-        }
-    };
-    
-    private shiftChildrenOneLevelUp = async (nodeId: number, levelUpParentId: number) => {
-        try {
-            let parentColor = (await Repo.findNodeById(levelUpParentId)).color;
-            const children = await Repo.findChildrenOfNode(nodeId);
-            
-            for (const child of children) {
-                if (child.type === "location" || child.type === "department") {
-                    parentColor = child.color; 
-                } else {
-                    child.color = parentColor;
-                }
-                
-                console.log(`Shifting child ${child.id} to parent ${levelUpParentId}`);
-                await Repo.updateNode({ ...child, parentId: levelUpParentId });
-            }
-        } catch (error) {
-            console.error("Error in shiftChildrenOneLevelUp:", error);
-            throw error; // Rethrow error to handle at a higher level if necessary
-        }
-    };
-    
-    
+
+
     removeNode = async (deleteData: deleteData): Promise<NodePromise> => {
         try {
             const node = await Repo.findNodeById(deleteData.id);
@@ -235,5 +174,121 @@ export default new class UseCase {
             return { status: StatusCode.InternalServerError as number, message: "Error when creating node" };
         }
     }
+
+
+    async checkForCycle(nodeId: number, newParentId: number): Promise<boolean> {
+        const descendants: number[] = [];
+    
+        // Recursive function to get all descendants of a node
+        async function getChildren(parentId: number): Promise<void> {
+            try {
+                const children = await Repo.findChildrenOfNode(parentId); // Fetch direct children of the current node
+                for (const child of children) {
+                    descendants.push(child.id); // Add child ID to descendants list
+                    await getChildren(child.id); // Recursively get children of this child
+                }
+            } catch (error) {
+                console.error(`Error fetching children of node ${parentId}:`, error);
+                throw new Error(`Error fetching descendants for node ${parentId}`);
+            }
+        }
+    
+        try {
+            await getChildren(nodeId); // Start finding descendants from the given nodeId
+
+            // After collecting descendants, check if newParentId is in descendants
+            if (descendants.includes(newParentId)) {
+                return true; // A cycle would be created
+            } else {
+                return false; // No cycle detected
+            }
+        } catch (error) {
+            console.error(`Error fetching descendants for node ${nodeId}:`, error);
+            throw new Error(`Failed to retrieve all descendants for node ${nodeId}`);
+        }
+    }
+    
+
+    private moveChildrenToNewParent = async (nodeId: number, newParentId: number) => {
+        try {
+            let parentColor = (await Repo.findNodeById(newParentId)).color; // Get color from the new parent node
+            console.log(nodeId, newParentId, "Propagating color change");
+    
+            const children = await Repo.findChildrenOfNode(nodeId);
+    
+            for (const child of children) {
+                if (child.type === "location" || child.type === "department") {
+                    parentColor = child.color; // If child is a location or department, update parentColor
+                } else {
+                    child.color = parentColor; // Inherit the parent color
+                }
+    
+                // Update the current child node with the new parent ID and color
+                await Repo.updateNode({ ...child });
+    
+                // Recursively update child nodes if any children exist (for multi-level color propagation)
+                const grandChildren = await Repo.findChildrenOfNode(child.id);
+                if (grandChildren.length > 0) {
+                    // Recursively propagate the color down to the next level
+                    await this.moveChildrenToNewParent(child.id, child.id); // Use child's ID as the new parent ID
+                }
+            }
+        } catch (error) {
+            console.error("Error in moveChildrenToNewParent:", error);
+            throw error; 
+        }
+    };
+    
+    
+    private shiftChildrenOneLevelUp = async (nodeId: number, levelUpParentId: number) => {
+        try {
+            // Get the color of the new parent (levelUpParentId)
+            let parentColor = (await Repo.findNodeById(levelUpParentId)).color;
+            const children = await Repo.findChildrenOfNode(nodeId);
+    
+            for (const child of children) {
+                if (child.type === "location" || child.type === "department") {
+                    // Update parentColor to the current child color (location/department)
+                    parentColor = child.color;
+                } else if (child.type === "employee") {
+                    // If it's an employee, propagate the current parent color
+                    child.color = parentColor;
+                }
+    
+                // Shift child to new parent (levelUpParentId) and update its color
+                console.log(`Shifting child ${child.id} to parent ${levelUpParentId}`);
+                await Repo.updateNode({ ...child, parentId: levelUpParentId });
+    
+                // Recursively propagate the color change to all descendants
+                await this.updateDescendantColors(child.id, parentColor);
+            }
+        } catch (error) {
+            console.error("Error in shiftChildrenOneLevelUp:", error);
+            throw error; // Rethrow the error to handle at a higher level if necessary
+        }
+    };
+    
+    // This part is still within the same function but handles the recursive color propagation
+    private updateDescendantColors = async (nodeId: number, parentColor: string) => {
+        const children = await Repo.findChildrenOfNode(nodeId);
+    
+        for (const child of children) {
+            if (child.type === "location" || child.type === "department") {
+                parentColor = child.color;
+            } else if (child.type === "employee") {
+                child.color = parentColor;
+            }
+    
+            // Update the child with the propagated color
+            await Repo.updateNode({ ...child });
+    
+            // Recursively update the colors of its descendants
+            await this.updateDescendantColors(child.id, parentColor);
+        }
+    };
+    
+    
+    
+    
    
 }

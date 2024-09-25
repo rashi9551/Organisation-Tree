@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../data-source';
-import { Node } from '../../entity/org-tree';
+import { Node, NodeType } from '../../entity/org-tree';
 import { NodeData } from '../../interfaces/interface';
 
 export default new class OrgTreeRepository {
@@ -37,6 +37,8 @@ export default new class OrgTreeRepository {
     async findNodeById(nodeId: number): Promise<Node | null> {
         try {
             const node = await this.nodeRepo.findOne({ where: { id: nodeId } });
+            console.log(node,"thi is node by id");
+            
             return node;
         } catch (error) {
             console.error("Error getNode:", error);
@@ -46,10 +48,14 @@ export default new class OrgTreeRepository {
 
     async findChildrenOfNode(parentId: number): Promise<Node[]> {
         try {
-            // Find children nodes where parentId matches the given parentId
-            return await this.nodeRepo.find({
+
+            const childernOfNodes= await this.nodeRepo.find({
                 where: { parentId },
             });
+            console.log(childernOfNodes,"=---=- this is children");
+            
+            return childernOfNodes
+        
         } catch (error) {
             console.error("Error finding children nodes:", error);
             throw new Error("Could not retrieve children nodes.");
@@ -84,28 +90,34 @@ export default new class OrgTreeRepository {
     }
     
 
-    // Remove a node with the option to either delete all children or shift them up
     async removeNode(nodeId: number, shiftChildren: boolean = false): Promise<void> {
         try {
-            // Fetch the node along with its children
             const node = await this.nodeRepo.findOne({ where: { id: nodeId }, relations: ['children'] });
-            if (!node) return; // If node doesn't exist, exit
+            if (!node) return;
     
             if (shiftChildren && node.children.length > 0) {
-                // Shift child nodes one level up
                 let parentColor = (await this.findNodeById(node.parentId)).color;
-
+    
                 for (const child of node.children) {
-                    child.parentId = node.parentId; 
+                    // Shift the child node to the node's parent
+                    child.parentId = node.parentId;
+    
+                    // If the child is a location or department, update the parentColor
                     if (child.type === "location" || child.type === "department") {
                         parentColor = child.color; 
-                    } else {
+                    } else if (child.type === "employee") {
+                        // If the child is an employee, inherit the parentColor
                         child.color = parentColor;
                     }
-                    
-                    await this.nodeRepo.save(child); // Save the updated child nodes
+    
+                    // Save the updated child node
+                    await this.nodeRepo.save(child);
+    
+                    // Recursively propagate color changes to the child's descendants
+                    await this.updateDescendantColors(child.id, parentColor);
                 }
             } else {
+                // If shiftChildren is false, remove all child nodes recursively
                 for (const child of node.children) {
                     await this.removeNode(child.id, false);
                 }
@@ -116,6 +128,25 @@ export default new class OrgTreeRepository {
         } catch (error) {
             console.error("Error during node removal in repository:", error);
             throw error; // Re-throw error to be handled at a higher level
+        }
+    }
+
+
+    private async updateDescendantColors(nodeId: number, parentColor: string): Promise<void> {
+        const children = await this.nodeRepo.find({ where: { parentId: nodeId } });
+    
+        for (const child of children) {
+            if (child.type === "location" || child.type === "department") {
+                parentColor = child.color; 
+            } else if (child.type === "employee") {
+                child.color = parentColor;
+            }
+    
+            // Save the updated child node
+            await this.nodeRepo.save(child);
+    
+            // Recursively propagate color changes to its descendants
+            await this.updateDescendantColors(child.id, parentColor);
         }
     }
     
@@ -142,6 +173,23 @@ export default new class OrgTreeRepository {
             throw error;
         }
     }
+
+    async findRootNode(): Promise<Node | null> {
+        try {
+            const rootNode = await this.nodeRepo.findOne({
+                where: {
+                    parentId: null,  // Root node will have no parent
+                    type: NodeType.ORGANIZATION,  // Use the enum value for 'organization'
+                },
+            });
+            return rootNode;
+        } catch (error) {
+            console.error("Error finding root node:", error);
+            throw new Error("Unable to find root node.");
+        }
+    }
+    
+    
 
    
 };
