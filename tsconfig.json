@@ -2,15 +2,20 @@
    "compilerOptions": {
       "esModuleInterop": true,
       "lib": [
-         "es5",
-         "es6"
+         "es6"      // Use ES6 or higher as 'es5' may cause issues with modern libraries
       ],
-      "target": "es5",
-      "module": "commonjs",
+      "target": "es6",  // Set target to ES6 or higher for modern syntax and features
+      "module": "commonjs",  // CommonJS for compatibility with Node.js
       "moduleResolution": "node",
-      "outDir": "./build",
+      "outDir": "./build",  // Output directory for compiled JS files
       "emitDecoratorMetadata": true,
       "experimentalDecorators": true,
-      "sourceMap": true
-   }
+      "sourceMap": true  // Enables source maps for debugging
+   },
+   "include": [
+      "src/**/*.ts"
+   ],
+   "exclude": [
+      "node_modules"
+   ]
 }

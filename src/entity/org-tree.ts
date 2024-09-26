@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index } from 'typeorm';
 
 // Enum for node types
 export enum NodeType {
@@ -20,12 +20,13 @@ export class Node {
         type: 'enum',
         enum: NodeType,
     })
-    type: NodeType;  // Use the enum for better type safety
+    type: NodeType;
 
     @Column({ default: 'white' })
     color: string;
 
     @Column({ nullable: true })
+    @Index()
     parentId: number;
 
     @ManyToOne(() => Node, node => node.children, { nullable: true, onDelete: 'SET NULL' })
