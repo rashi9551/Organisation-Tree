@@ -183,6 +183,15 @@ export default new class OrgTreeRepository {
             throw new Error("Unable to find root node.");
         }
     }
+
+    async getFullTree(): Promise<Node[]> {
+        return await this.nodeRepo
+            .find()
+    }
+
+
+    
+    
     
     
 

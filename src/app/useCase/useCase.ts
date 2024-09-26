@@ -107,7 +107,7 @@ export default new class UseCase {
     
             // Check for cycle if parent ID is being updated
             if (nodeData.parentId && nodeData.parentId !== node.parentId) {
-                const isCycle = await this.checkForCycle(nodeData.id, nodeData.parentId);
+                const isCycle = await this.checkForCycle(nodeData.id,nodeData.parentId);
                 if (isCycle) {
                     return { status: StatusCode.BadRequest as number, message: "Updating this node's parent would create a cycle." };
                 }
@@ -185,38 +185,34 @@ export default new class UseCase {
         }
     }
 
-
     async checkForCycle(nodeId: number, newParentId: number): Promise<boolean> {
-        const descendants: number[] = [];
+        // Step 1: Fetch all nodes
+        const nodes = await Repo.getFullTree();
     
-        // Recursive function to get all descendants of a node
-        async function getChildren(parentId: number): Promise<void> {
-            try {
-                const children = await Repo.findChildrenOfNode(parentId); // Fetch direct children of the current node
-                for (const child of children) {
-                    descendants.push(child.id); // Add child ID to descendants list
-                    await getChildren(child.id); // Recursively get children of this child
-                }
-            } catch (error) {
-                console.error(`Error fetching children of node ${parentId}:`, error);
-                throw new Error(`Error fetching descendants for node ${parentId}`);
-            }
-        }
+        // Step 2: Create a map of nodes for easy lookup
+        const nodeMap = new Map<number, Node>();
+        nodes.forEach(node => nodeMap.set(node.id, node));
     
-        try {
-            await getChildren(nodeId); // Start finding descendants from the given nodeId
-
-            // After collecting descendants, check if newParentId is in descendants
-            if (descendants.includes(newParentId)) {
-                return true; // A cycle would be created
-            } else {
-                return false; // No cycle detected
+        // Step 3: Check if newParentId is a descendant of nodeId
+        const isDescendant = (currentNodeId: number | null): boolean => {
+            if (currentNodeId === null) return false; // No parent
+    
+            const currentNode = nodeMap.get(currentNodeId);
+            if (!currentNode) return false; // Node not found
+    
+            // If currentNodeId is the new parent, cycle detected
+            if (currentNodeId === newParentId) {
+                return true; // Cycle detected
             }
-        } catch (error) {
-            console.error(`Error fetching descendants for node ${nodeId}:`, error);
-            throw new Error(`Failed to retrieve all descendants for node ${nodeId}`);
-        }
+    
+            // Recursively check the parent
+            return isDescendant(currentNode.parentId);
+        };
+    
+        // Step 4: Perform the check
+        return isDescendant(nodeId); // Check if newParentId is a descendant of nodeId
     }
+    
     
 
     private moveChildrenToNewParent = async (nodeId: number, newParentId: number) => {
