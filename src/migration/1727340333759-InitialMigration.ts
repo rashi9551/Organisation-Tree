@@ -10,6 +10,8 @@ export class InitialMigration1727340333759 implements MigrationInterface {
                 type ENUM('organization', 'location', 'employee', 'department') NOT NULL,
                 color VARCHAR(50) DEFAULT 'white',
                 parentId INT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Added createdAt column
+                updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  -- Added updatedAt column
                 FOREIGN KEY (parentId) REFERENCES nodes(id) ON DELETE SET NULL
             );
         `);

@@ -16,56 +16,63 @@ export default new class UseCase {
     
     createNode = async (nodeData: NodeData): Promise<NodePromise> => {
         try {
-
+    
+            // Validate node type
             if (!nodeData.type) {
                 return { status: 400, message: "Node type is required." }; // Bad request
             }
-
+    
             if (!Object.values(NodeType).includes(nodeData.type)) {
                 return { status: 400, message: `Invalid node type. Allowed types are: ${Object.values(NodeType).join(', ')}.` };
             }
-
-            const existingRootNode = await Repo.findRootNode(); // A method to find the root node
-
-            if(!existingRootNode && nodeData.type!=NodeType.ORGANIZATION){
+    
+            // Find existing root node
+            const existingRootNode = await Repo.findRootNode();
+    
+            // Ensure no child nodes are created without a root node
+            if(!existingRootNode && nodeData.type !== NodeType.ORGANIZATION){
                 return {
                     status: StatusCode.BadRequest as number,
                     message: "Cannot create child nodes without a root node (organization). Please create a root node first.",
                 };
             }
-
-
-            // Case for root node creation (no parent)
+    
+            // Handle root node creation (no parent)
             if (!nodeData.parentId) {
-
-                // Check if a root node already exists
                 if (existingRootNode) {
                     return {
                         status: StatusCode.BadRequest as number,
                         message: "A root node already exists. Only one root node is allowed.",
                     };
                 }
-
+    
                 nodeData.color = "white"; 
                 const node = await Repo.createNode(nodeData);
                 return { status: StatusCode.Created as number, node, message: "Root node created successfully" };
             }
-
+    
             // Check if the parent node exists
             const parentExists = await Repo.nodeExists(nodeData.parentId);
             if (!parentExists) {
                 return { status: StatusCode.NotFound as number, message: `Parent node with ID ${nodeData.parentId} does not exist.` };
             }
-
-            // Assign color for location or department nodes
-            if (nodeData.type === "location" || nodeData.type === "department") {
-                nodeData.color = colorPool[lastAssignedColorIndex]; 
-                console.log(lastAssignedColorIndex,colorPool[lastAssignedColorIndex]);
-                lastAssignedColorIndex++;
-
-                // Reset the color index if it exceeds the pool length
-                if (lastAssignedColorIndex >= colorPool.length) {
-                    lastAssignedColorIndex = 0;
+    
+            // Logic to fetch the last created department or location node
+            if (nodeData.type === NodeType.DEPARTMENT || nodeData.type === NodeType.LOCATION) {
+                const latestNode = await Repo.findLatestNodeByType(); // Create a function to find the latest created department/location under the same parent
+                console.log(latestNode,"ithu last node-=-=-=-=");
+                
+                if (latestNode) {
+                    // Find the color of the latest node in the pool
+                    const lastColor = latestNode.color;
+                    const lastColorIndex = colorPool.indexOf(lastColor);
+                    const nextColorIndex = (lastColorIndex + 1) % colorPool.length; // Get the next color from the pool in a cyclic manner
+    
+                    nodeData.color = colorPool[nextColorIndex];
+                } else {
+                    // No latest node found, use the next color from the global index
+                    nodeData.color = colorPool[lastAssignedColorIndex];
+                    lastAssignedColorIndex = (lastAssignedColorIndex + 1) % colorPool.length; // Increment the index, reset if it exceeds the pool length
                 }
             } else {
                 // For other nodes, inherit color from the parent node
@@ -81,17 +88,17 @@ export default new class UseCase {
                     throw error;
                 }
             }
-
+    
             // Create the node under the specified parent
             const node = await Repo.createNode(nodeData);
             return { status: StatusCode.Created as number, node, message: "Node created successfully" };
-
+    
         } catch (error) {
             console.error("Error during node creation:", error);
             return { status: StatusCode.InternalServerError as number, message: "Error when creating node" };
         }
-    }
-
+    };
+    
     
     
     

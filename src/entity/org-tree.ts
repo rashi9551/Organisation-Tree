@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 // Enum for node types
 export enum NodeType {
@@ -34,4 +34,12 @@ export class Node {
 
     @OneToMany(() => Node, node => node.parent)
     children: Node[];
+
+    // Automatically managed timestamp for entity creation
+    @CreateDateColumn()
+    createdAt: Date;
+
+    // Automatically managed timestamp for the last update
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

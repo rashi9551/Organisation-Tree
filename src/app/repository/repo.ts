@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppDataSource } from '../../data-source';
 import { Node, NodeType } from '../../entity/org-tree';
 import { NodeData } from '../../interfaces/interface';
@@ -188,6 +188,21 @@ export default new class OrgTreeRepository {
         return await this.nodeRepo
             .find()
     }
+
+    async findLatestNodeByType(): Promise<Node | undefined> {
+        try {
+            const types = [NodeType.DEPARTMENT, NodeType.LOCATION];  // Specify the types
+            const latestNode = await this.nodeRepo.findOne({
+                where: { type: In(types) },  // Use In operator to match multiple types
+                order: { updatedAt: 'DESC' },
+            });
+            return latestNode;
+        } catch (error) {
+            console.error('Error retrieving latest node:', error);
+            throw error; // Rethrow or handle error as needed
+        }
+    }
+    
 
 
     
